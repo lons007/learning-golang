@@ -7,7 +7,7 @@ import (
 )
 
 // GetFloats читает значение float64 из каждой строки файла.
-func GetFloat(fileName string) ([3]float64, error) {
+func GetFloats(fileName string) ([3]float64, error) {
 	var numbers [3]float64
 	file, err := os.Open(fileName)
 	if err != nil {
