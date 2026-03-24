@@ -2,12 +2,48 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 )
+
+const (
+	saveFile = "tasks.json"
+)
+
+func saveTasks(tasks []Task) error {
+	data, err := json.MarshalIndent(tasks, "", "  ")
+	if err != nil {
+		return fmt.Errorf("ошибка преобразования JSON: %w", err)
+	}
+	err = os.WriteFile(saveFile, data, 0644)
+	if err != nil {
+		return fmt.Errorf("ошибка записи файла: %w", err)
+	}
+	return nil
+}
+
+func loadTasks() ([]Task, error) {
+	var loadedTasks []Task
+	read, err := os.ReadFile(saveFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Println("Файл не найден, начинаем с пустого списка")
+			return []Task{}, nil
+		}
+		return nil, fmt.Errorf("ошибка чтения файла: %w", err)
+	}
+
+	err = json.Unmarshal(read, &loadedTasks)
+	if err != nil {
+		fmt.Printf("ошибка парсинга JSON: %v. Создаем новый список задач.\n", err)
+		return []Task{}, nil
+	}
+	return loadedTasks, nil
+}
 
 type Task struct {
 	ID        int
@@ -55,6 +91,10 @@ func idTasks(prompt string, reader *bufio.Reader) (int, error) {
 
 func main() {
 	var tasks []Task
+	tasks, _ = loadTasks()
+	// if err != nil {
+	// 	fmt.Printf("Файл поврежден, %v\n", err)
+	// }
 	fmt.Println("Добро пожаловать в Трекер задач!")
 	reader := bufio.NewReader(os.Stdin)
 	commandExit := false
@@ -86,8 +126,7 @@ mainForlabel:
 				fmt.Printf("Задача с ID '%d' не найдена\n", id)
 			}
 		case "list":
-			lenSlice := len(tasks)
-			if lenSlice == 0 {
+			if len(tasks) == 0 {
 				fmt.Println("Список задач пуст")
 			}
 			for _, task := range tasks {
@@ -180,6 +219,9 @@ mainForlabel:
 			}
 
 		case "exit":
+			if err := saveTasks(tasks); err != nil {
+				fmt.Printf("Не удалось сохранить задачи: %v\n", err)
+			}
 			fmt.Println("До встречи!")
 			commandExit = true
 		default:
